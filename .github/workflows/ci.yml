@@ -9,8 +9,8 @@ on:
       - main
 
 jobs:
-  test:
-    name: Test Python Project
+  backend:
+    name: Backend Tests
     runs-on: ubuntu-latest
 
     steps:
@@ -55,27 +55,61 @@ jobs:
           python -c "import torch; print('Torch:', torch.__version__)"
           python -c "import detectron2; print('Detectron2: OK')"
           python -c "import densepose; print('DensePose: OK')"
+          python -c "import fastapi; print('FastAPI: OK')"
 
       - name: Compile Python files
         run: |
           python -m compileall app
 
-  docker:
-    name: Build Docker Image
+  frontend:
+    name: Frontend Build
     runs-on: ubuntu-latest
-    needs: test
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Build Docker image
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Build frontend
+        working-directory: frontend
+        run: npm run build
+
+  docker:
+    name: Docker Build
+    runs-on: ubuntu-latest
+    needs:
+      - backend
+      - frontend
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build backend Docker image
         run: |
           docker build \
             -f Dockerfile.cpu \
-            -t densepose-human-body-surface-mapper:ci \
+            -t densepose-backend:ci \
             .
 
-      - name: Verify Docker image
+      - name: Build frontend Docker image
         run: |
-          docker images densepose-human-body-surface-mapper:ci
+          docker build \
+            -f frontend/Dockerfile \
+            -t densepose-frontend:ci \
+            ./frontend
+
+      - name: Verify Docker images
+        run: |
+          docker images densepose-backend:ci
+          docker images densepose-frontend:ci
