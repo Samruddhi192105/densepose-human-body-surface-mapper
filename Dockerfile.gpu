@@ -1,0 +1,45 @@
+FROM nvidia/cuda:12.4.1-cudnn-runtime-ubuntu22.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV PYTHONUNBUFFERED=1
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3.10 \
+    python3.10-dev \
+    python3-pip \
+    git \
+    build-essential \
+    gcc \
+    g++ \
+    cmake \
+    libgl1 \
+    libglib2.0-0 \
+    libsm6 \
+    libxext6 \
+    libxrender1 \
+    ffmpeg \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN ln -sf /usr/bin/python3.10 /usr/bin/python
+
+WORKDIR /workspace
+
+COPY requirements.txt .
+
+RUN python -m pip install --upgrade pip setuptools wheel
+
+RUN python -m pip install \
+    torch torchvision \
+    --index-url https://download.pytorch.org/whl/cu124
+
+RUN python -m pip install -r requirements.txt
+
+RUN git clone --depth 1 https://github.com/facebookresearch/detectron2.git /opt/detectron2
+
+RUN python -m pip install -e /opt/detectron2
+
+COPY app ./app
+COPY input ./input
+COPY output ./output
+
+CMD ["python", "-m", "app.cli", "--help"]

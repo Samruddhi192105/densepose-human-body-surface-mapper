@@ -1,0 +1,15 @@
+numpy
+opencv-python
+matplotlib
+pycocotools
+fvcore
+iopath
+omegaconf
+hydra-core
+cloudpickle
+pydot
+termcolor
+tabulate
+tqdm
+yacs
+Pillow

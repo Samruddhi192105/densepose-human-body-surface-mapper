@@ -1,0 +1,10 @@
+services:
+  densepose:
+    build:
+      context: .
+      dockerfile: Dockerfile.cpu
+    volumes:
+      - ./input:/workspace/input
+      - ./output:/workspace/output
+    working_dir: /workspace
+    command: ["python", "-m", "app.cli", "--help"]
