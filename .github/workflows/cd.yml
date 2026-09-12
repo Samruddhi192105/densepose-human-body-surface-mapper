@@ -1,0 +1,67 @@
+name: DensePose CD
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+
+  build-and-push:
+    name: Build and Push Docker Images
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download DensePose model
+        run: |
+          mkdir -p models
+
+          curl -L \
+            "https://dl.fbaipublicfiles.com/densepose/densepose_rcnn_R_50_FPN_s1x/165712039/model_final_162be9.pkl" \
+            -o models/model_final_162be9.pkl
+
+      - name: Verify DensePose model
+        run: |
+          ls -lh models/model_final_162be9.pkl
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set image names
+        run: |
+          echo "BACKEND_IMAGE=ghcr.io/${{ github.repository_owner }}/densepose-backend" >> $GITHUB_ENV
+          echo "FRONTEND_IMAGE=ghcr.io/${{ github.repository_owner }}/densepose-frontend" >> $GITHUB_ENV
+
+      - name: Build and push backend image
+        run: |
+          docker build \
+            -f Dockerfile.cpu \
+            -t $BACKEND_IMAGE:latest \
+            -t $BACKEND_IMAGE:${{ github.sha }} \
+            .
+
+          docker push $BACKEND_IMAGE:latest
+          docker push $BACKEND_IMAGE:${{ github.sha }}
+
+      - name: Build and push frontend image
+        run: |
+          docker build \
+            -f frontend/Dockerfile \
+            -t $FRONTEND_IMAGE:latest \
+            -t $FRONTEND_IMAGE:${{ github.sha }} \
+            ./frontend
+
+          docker push $FRONTEND_IMAGE:latest
+          docker push $FRONTEND_IMAGE:${{ github.sha }}
