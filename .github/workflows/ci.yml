@@ -95,6 +95,17 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Download DensePose model
+        run: |
+          mkdir -p models
+          curl -L \
+            "https://dl.fbaipublicfiles.com/densepose/densepose_rcnn_R_50_FPN_s1x/165712039/model_final_162be9.pkl" \
+            -o models/model_final_162be9.pkl
+
+      - name: Verify DensePose model
+        run: |
+          ls -lh models/model_final_162be9.pkl
+          
       - name: Build backend Docker image
         run: |
           docker build \
