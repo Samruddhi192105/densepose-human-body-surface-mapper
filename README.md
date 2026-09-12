@@ -1,332 +1,98 @@
 # DensePose Human Body Surface Mapper
 
-Day 6 computer-vision project: use a pretrained DensePose-RCNN model to map human pixels in an image/video to a canonical human surface representation.
+A computer vision application that uses **DensePose** to map the visible human body surface into detailed body-part regions and dense surface coordinates.
 
-## What this project demonstrates
+The project combines **DensePose, Detectron2, PyTorch, FastAPI, Next.js, Docker, and GitHub Actions** to provide an end-to-end human body surface mapping system.
 
-Input:
-- One human image, or
-- A video containing people
+## 📌 Overview
 
-Output:
-1. Original image
-2. DensePose fine-segmentation visualization
-3. IUV representation
-4. Body-part coverage analysis
-5. Detection confidence and bounding-box information
+Traditional human pose estimation identifies a limited number of body keypoints such as the shoulders, elbows, knees, and ankles.
 
-The project does **not** train DensePose from scratch. It downloads the official pretrained DensePose-RCNN R50-FPN model automatically on first inference.
+DensePose goes further by mapping **visible human pixels** to a canonical representation of the human body surface.
 
-## Important Windows note
+This project takes an image of a person and generates:
 
-The official Detectron2 installation documentation lists Linux/macOS support and Detectron2 is normally built from source. For Windows, the most reliable setup for this project is **Docker Desktop with WSL2** rather than trying to compile Detectron2 directly in native Windows Python.
+- DensePose visualization
+- IUV representation
+- Body-part map
+- Human detection information
+- Body-part pixel analysis
+- Confidence scores
+- Bounding boxes
 
-This project therefore includes a Docker setup.
+The application also provides a web interface where users can upload an image and view the generated results.
 
-## Architecture
+> **Note:** DensePose maps visible human regions to a canonical body surface representation. It does not reconstruct hidden body surfaces or produce a complete 3D human model from a single RGB image.
 
-```text
-Image / Video
-      |
-      v
-Detectron2
-      |
-      v
-DensePose-RCNN pretrained model
-      |
-      +------------------+
-      |                  |
-      v                  v
-Human detection     DensePose head
-                         |
-                         v
-                    I, U, V maps
-                         |
-              +----------+----------+
-              |                     |
-              v                     v
-       Visualization         Body-part analysis
-```
+# ✨ Features
 
-## DensePose concept
+## 🧍 Human Detection
 
-Normal pose estimation might predict a limited number of keypoints:
+Detects people present in the input image using the pretrained DensePose model.
 
-```text
-nose, shoulders, elbows, wrists, hips, knees, ankles...
-```
+For every detected person, the system provides:
 
-DensePose instead predicts a dense correspondence over the visible human surface.
+- Detection confidence
+- Bounding box
+- Person index
+- Visible body regions
 
-For every predicted human pixel:
+## 🎨 DensePose Visualization
 
-```text
-I = body-part index
-U = horizontal coordinate on that body-part surface
-V = vertical coordinate on that body-part surface
-```
+Generates a visual overlay showing the DensePose estimation on the original image.
 
-The model uses 24 semantic body-part labels in the DensePose chart representation.
+This provides an intuitive representation of how the detected human body surface is mapped.
 
-## Project structure
+### DensePose Overlay
 
-```text
-densepose-human-body-surface-mapper/
-│
-├── app/
-│   ├── __init__.py
-│   ├── densepose_mapper.py
-│   ├── analyze.py
-│   └── cli.py
-│
-├── input/
-│   └── .gitkeep
-│
-├── output/
-│   └── .gitkeep
-│
-├── Dockerfile.cpu
-├── Dockerfile.gpu
-├── docker-compose.yml
-├── requirements.txt
-├── .dockerignore
-├── .gitignore
-└── README.md
-```
+<img width="959" height="415" alt="Screenshot 2026-09-12 122831" src="https://github.com/user-attachments/assets/a31fe200-600d-403d-8b5f-6e9225c4e5e1" />
 
-## Option A — Docker CPU
+<img width="581" height="395" alt="Screenshot 2026-09-12 122857" src="https://github.com/user-attachments/assets/61d136a0-7ba8-4b95-88a2-55fb81221f35" />
 
-This is the easiest setup if you do not want to configure CUDA.
+<img width="454" height="408" alt="Screenshot 2026-09-12 122910" src="https://github.com/user-attachments/assets/a09ba745-dc80-444c-ba80-a0248be5dcec" />
 
-### 1. Install
+<img width="483" height="268" alt="Screenshot 2026-09-12 122919" src="https://github.com/user-attachments/assets/07bf3271-ef17-491a-946f-085373ed1ca1" />
 
-You need:
-- Docker Desktop
-- WSL2 enabled on Windows
+## 🧩 Body-Part Mapping
 
-### 2. Build
+The project converts DensePose's 24 fine-grained surface patches into meaningful semantic body regions.
 
-From this folder:
+The 24 DensePose patches are grouped into 14 body-part categories:
 
-```bash
-docker build -f Dockerfile.cpu -t densepose-mapper .
-```
+| Body Part | DensePose Labels |
+|---|---|
+| Torso | 1, 2 |
+| Right Hand | 3 |
+| Left Hand | 4 |
+| Left Foot | 5 |
+| Right Foot | 6 |
+| Right Upper Leg | 7, 9 |
+| Left Upper Leg | 8, 10 |
+| Right Lower Leg | 11, 13 |
+| Left Lower Leg | 12, 14 |
+| Left Upper Arm | 15, 17 |
+| Right Upper Arm | 16, 18 |
+| Left Lower Arm | 19, 21 |
+| Right Lower Arm | 20, 22 |
+| Head | 23, 24 |
 
-### 3. Run an image
+## 🌐 IUV Representation
 
-Put an image inside:
+DensePose represents each detected human pixel using three values:
+
+### I — Body-Part Index
+
+Identifies which DensePose body-surface patch the pixel belongs to.
+
+### U — Horizontal Surface Coordinate
+
+Represents the horizontal coordinate on the canonical surface of the corresponding body part.
+
+### V — Vertical Surface Coordinate
+
+Represents the vertical coordinate on the canonical surface of the corresponding body part.
+
+Therefore:
 
 ```text
-input/person.jpg
-```
-
-Then:
-
-```bash
-docker run --rm \
-  -v "${PWD}/input:/workspace/input" \
-  -v "${PWD}/output:/workspace/output" \
-  densepose-mapper \
-  python -m app.cli image --input /workspace/input/person.jpg
-```
-
-On Windows PowerShell, if `${PWD}` causes issues, use the absolute project path.
-
-Example:
-
-```powershell
-docker run --rm -v "D:\densepose-human-body-surface-mapper\input:/workspace/input" -v "D:\densepose-human-body-surface-mapper\output:/workspace/output" densepose-mapper python -m app.cli image --input /workspace/input/person.jpg
-```
-
-CPU inference can be slow. That is normal for DensePose.
-
-## Option B — Docker + NVIDIA GPU
-
-If your laptop has a supported NVIDIA GPU and Docker Desktop has GPU access configured:
-
-```bash
-docker build -f Dockerfile.gpu -t densepose-mapper-gpu .
-```
-
-Run:
-
-```bash
-docker run --rm --gpus all \
-  -v "${PWD}/input:/workspace/input" \
-  -v "${PWD}/output:/workspace/output" \
-  densepose-mapper-gpu \
-  python -m app.cli image --input /workspace/input/person.jpg
-```
-
-GPU inference is strongly preferred for video.
-
-## Image inference
-
-```bash
-python -m app.cli image --input input/person.jpg
-```
-
-Optional confidence threshold:
-
-```bash
-python -m app.cli image --input input/person.jpg --threshold 0.7
-```
-
-Output files:
-
-```text
-output/
-├── densepose_overlay.png
-├── iuv.png
-├── body_part_map.png
-└── analysis.json
-```
-
-## Video inference
-
-```bash
-python -m app.cli video --input input/person.mp4
-```
-
-Optional frame sampling:
-
-```bash
-python -m app.cli video --input input/person.mp4 --every 2
-```
-
-This processes every 2nd frame.
-
-## Understanding the outputs
-
-### 1. DensePose overlay
-
-The original person image is covered by a colored DensePose segmentation map.
-
-Different colors correspond to different body regions.
-
-### 2. IUV image
-
-The three channels represent:
-
-```text
-Channel 0 -> I
-Channel 1 -> U
-Channel 2 -> V
-```
-
-I is discrete body-part identity.
-
-U and V are continuous surface coordinates.
-
-### 3. Body-part map
-
-The project converts the predicted I channel into a visualization showing where DensePose assigned body-part labels.
-
-### 4. analysis.json
-
-Example structure:
-
-```json
-{
-  "people_detected": 1,
-  "people": [
-    {
-      "person_index": 0,
-      "confidence": 0.98,
-      "bbox_xyxy": [120, 50, 510, 900],
-      "visible_body_parts": [1, 2, 3, 4]
-    }
-  ]
-}
-```
-
-## Why IUV matters for virtual try-on
-
-A normal bounding box tells you:
-
-```text
-"The person is here."
-```
-
-A pose keypoint detector tells you:
-
-```text
-"The elbow is here."
-```
-
-DensePose gives richer information:
-
-```text
-"This pixel belongs to the left lower arm,
-and this pixel corresponds to a particular
-location on the canonical arm surface."
-```
-
-That makes DensePose useful for applications such as:
-
-- virtual try-on
-- garment warping
-- body-aware image editing
-- human parsing
-- pose-conditioned generation
-- clothing transfer
-- human surface correspondence
-
-DensePose alone is **not** a complete virtual try-on system. It provides geometric/body correspondence information that can be used by later stages.
-
-## What to explain in an interview
-
-### What is DensePose?
-
-DensePose is a dense human pose estimation method that maps pixels of a human image to a canonical 3D body surface representation.
-
-### Pose estimation vs DensePose
-
-Pose estimation:
-
-```text
-few semantic keypoints
-```
-
-DensePose:
-
-```text
-dense pixel-to-surface correspondence
-```
-
-### What is IUV?
-
-```text
-I = body-part index
-U = horizontal coordinate
-V = vertical coordinate
-```
-
-### Why use a pretrained model?
-
-DensePose is a large deep-learning system trained on human annotations. For an application project, training it from scratch would require a large dataset, substantial GPU compute, and significant training time. A pretrained model lets us focus on inference and understanding the representation.
-
-## Technical flow
-
-1. Read image with OpenCV.
-2. Build Detectron2 configuration.
-3. Add DensePose configuration.
-4. Load pretrained DensePose-RCNN R50-FPN weights.
-5. Run human detection.
-6. Run DensePose prediction on detected humans.
-7. Extract chart results.
-8. Read `labels`, `U`, and `V`.
-9. Build IUV output.
-10. Visualize body-part segmentation.
-11. Calculate per-person body-part coverage.
-12. Save JSON analysis.
-
-## Important limitation
-
-DensePose predicts visible surface correspondence. It does not magically recover the exact hidden/back side of a person from one RGB image.
-
-## References
-
-- Detectron2: https://github.com/facebookresearch/detectron2
-- DensePose project inside Detectron2: https://github.com/facebookresearch/detectron2/tree/main/projects/DensePose
-- DensePose model zoo: https://github.com/facebookresearch/detectron2/blob/main/projects/DensePose/doc/MODEL_ZOO.md
+IUV = [Body-Part Index, U Coordinate, V Coordinate]
