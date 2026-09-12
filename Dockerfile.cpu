@@ -36,5 +36,6 @@ RUN pip install --no-build-isolation -e /opt/detectron2/projects/DensePose
 COPY app ./app
 COPY input ./input
 COPY output ./output
+COPY models ./models
 
-CMD ["python", "-m", "app.cli", "--help"]
+CMD ["uvicorn", "app.api:app", "--host", "0.0.0.0", "--port", "8000"]

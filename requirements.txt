@@ -13,3 +13,6 @@ tabulate
 tqdm
 yacs
 Pillow
+fastapi
+uvicorn[standard]
+python-multipart

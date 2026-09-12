@@ -20,10 +20,8 @@ MODEL_CONFIG = (
     "/opt/detectron2/projects/DensePose/configs/"
     "densepose_rcnn_R_50_FPN_s1x.yaml"
 )
-MODEL_WEIGHTS = (
-    "https://dl.fbaipublicfiles.com/densepose/"
-    "densepose_rcnn_R_50_FPN_s1x/165712039/model_final_162be9.pkl"
-)
+MODEL_WEIGHTS = "/workspace/models/model_final_162be9.pkl"
+
 class DensePoseMapper:
     def __init__(self, threshold: float = 0.5):
         self.threshold = threshold
