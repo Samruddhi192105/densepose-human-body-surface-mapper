@@ -9,7 +9,6 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 export default function Dashboard() {
   const router = useRouter();
-  const supabase = createClient();
   const [file, setFile] = useState(null);
   const [preview, setPreview] = useState(null);
   const [result, setResult] = useState(null);
@@ -18,6 +17,7 @@ export default function Dashboard() {
   const [error, setError] = useState("");
 
   async function signOut() {
+    const supabase = createClient();
     await supabase.auth.signOut();
     router.push("/login");
     router.refresh();
