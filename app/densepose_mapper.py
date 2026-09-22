@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 from typing import List, Tuple
 
@@ -15,7 +16,7 @@ from densepose import add_densepose_config
 from densepose.vis.extractor import DensePoseResultExtractor
 from densepose.vis.densepose_results import DensePoseResultsFineSegmentationVisualizer
 
-from .analyze import summarize_person 
+from .analyze import BODY_PARTS, summarize_person
 MODEL_CONFIG = (
     "/opt/detectron2/projects/DensePose/configs/"
     "densepose_rcnn_R_50_FPN_s1x.yaml"
@@ -33,6 +34,12 @@ class DensePoseMapper:
         cfg.MODEL.WEIGHTS = MODEL_WEIGHTS
         cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = threshold
         cfg.MODEL.DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+
+        # Smaller test images make CPU inference substantially faster while
+        # preserving the original image dimensions for generated outputs.
+        test_size = int(os.getenv("DENSEPOSE_TEST_SIZE", "800"))
+        cfg.INPUT.MIN_SIZE_TEST = min(test_size, 800)
+        cfg.INPUT.MAX_SIZE_TEST = test_size
 
         self.device = cfg.MODEL.DEVICE
         self.predictor = DefaultPredictor(cfg)
@@ -116,6 +123,47 @@ class DensePoseMapper:
 
         return cv2.applyColorMap(scaled, cv2.COLORMAP_TURBO)
 
+    @staticmethod
+    def make_body_part_heatmap(iuv_image: np.ndarray) -> np.ndarray:
+        labels = iuv_image[:, :, 0]
+        detected = (labels > 0).astype(np.float32)
+        density = cv2.GaussianBlur(detected, (0, 0), sigmaX=15)
+
+        if density.max() > 0:
+            density = density / density.max()
+
+        heatmap = cv2.applyColorMap(
+            (density * 255).astype(np.uint8),
+            cv2.COLORMAP_INFERNO,
+        )
+        heatmap[labels == 0] = 0
+        return heatmap
+
+    @staticmethod
+    def make_body_part_legend() -> list[dict]:
+        legend = []
+
+        for label, name in BODY_PARTS.items():
+            scaled_label = np.uint8(label * (255.0 / 24.0))
+            color_bgr = cv2.applyColorMap(
+                np.array([[scaled_label]], dtype=np.uint8),
+                cv2.COLORMAP_TURBO,
+            )[0, 0]
+
+            legend.append(
+                {
+                    "id": label,
+                    "name": name,
+                    "color": "#{:02x}{:02x}{:02x}".format(
+                        int(color_bgr[2]),
+                        int(color_bgr[1]),
+                        int(color_bgr[0]),
+                    ),
+                }
+            )
+
+        return legend
+
     def process_image(
         self,
         input_path: str,
@@ -144,6 +192,7 @@ class DensePoseMapper:
         )
 
         body_part_map = self.make_body_part_map(iuv)
+        body_part_heatmap = self.make_body_part_heatmap(iuv)
 
         people = []
 
@@ -173,6 +222,7 @@ class DensePoseMapper:
             "input": str(input_path),
             "people_detected": len(people),
             "people": people,
+            "body_part_legend": self.make_body_part_legend(),
             "iuv_definition": {
                 "I": "body-part index",
                 "U": "horizontal canonical surface coordinate",
@@ -183,6 +233,7 @@ class DensePoseMapper:
         cv2.imwrite(str(output / "densepose_overlay.png"), overlay)
         cv2.imwrite(str(output / "iuv.png"), iuv)
         cv2.imwrite(str(output / "body_part_map.png"), body_part_map)
+        cv2.imwrite(str(output / "body_part_heatmap.png"), body_part_heatmap)
 
         with open(output / "analysis.json", "w", encoding="utf-8") as f:
             json.dump(analysis, f, indent=2)

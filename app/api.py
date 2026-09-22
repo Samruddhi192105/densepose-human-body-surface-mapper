@@ -1,10 +1,12 @@
 from __future__ import annotations
-from fastapi.middleware.cors import CORSMiddleware
+
+import os
 import shutil
 import uuid
 from pathlib import Path
 
 from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 
 from .densepose_mapper import DensePoseMapper
@@ -16,28 +18,52 @@ app = FastAPI(
     version="1.0.0",
 )
 
+
+# ---------------------------------------------------------
+# CORS
+# ---------------------------------------------------------
+
+allowed_origins = [
+    origin.strip()
+    for origin in os.getenv(
+        "ALLOWED_ORIGINS",
+        "http://localhost:3000",
+    ).split(",")
+    if origin.strip()
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-    ],
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Load the DensePose model once when the API starts.
-# This prevents loading the model for every request.
+
+# ---------------------------------------------------------
+# DensePose model
+# ---------------------------------------------------------
+
 mapper = DensePoseMapper(threshold=0.5)
 
 
+# ---------------------------------------------------------
+# Storage
+# ---------------------------------------------------------
+
 BASE_DIR = Path("/workspace")
+
 UPLOAD_DIR = BASE_DIR / "api_uploads"
 OUTPUT_DIR = BASE_DIR / "api_outputs"
 
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
+
+# ---------------------------------------------------------
+# Basic endpoints
+# ---------------------------------------------------------
 
 @app.get("/")
 def root():
@@ -55,6 +81,10 @@ def health():
         "device": mapper.device,
     }
 
+
+# ---------------------------------------------------------
+# Protected DensePose endpoint
+# ---------------------------------------------------------
 
 @app.post("/predict")
 async def predict(file: UploadFile = File(...)):
@@ -97,9 +127,16 @@ async def predict(file: UploadFile = File(...)):
             "status": "success",
             "analysis": analysis,
             "results": {
-                "densepose_overlay": f"/results/{request_id}/densepose_overlay.png",
+                "densepose_overlay": (
+                    f"/results/{request_id}/densepose_overlay.png"
+                ),
                 "iuv": f"/results/{request_id}/iuv.png",
-                "body_part_map": f"/results/{request_id}/body_part_map.png",
+                "body_part_map": (
+                    f"/results/{request_id}/body_part_map.png"
+                ),
+                "body_part_heatmap": (
+                    f"/results/{request_id}/body_part_heatmap.png"
+                ),
             },
         }
 
@@ -122,12 +159,28 @@ async def predict(file: UploadFile = File(...)):
             pass
 
 
+# ---------------------------------------------------------
+# Result files
+# ---------------------------------------------------------
+
 @app.get("/results/{request_id}/{filename}")
-def get_result(request_id: str, filename: str):
+def get_result(
+    request_id: str,
+    filename: str,
+):
+    try:
+        uuid.UUID(request_id)
+    except ValueError:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid request ID.",
+        )
+
     allowed_files = {
         "densepose_overlay.png",
         "iuv.png",
         "body_part_map.png",
+        "body_part_heatmap.png",
         "analysis.json",
     }
 

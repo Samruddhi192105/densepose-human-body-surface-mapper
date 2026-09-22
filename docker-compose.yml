@@ -5,6 +5,12 @@ services:
       context: .
       dockerfile: Dockerfile.cpu
 
+    env_file:
+      - .env.local
+
+    environment:
+      DENSEPOSE_TEST_SIZE: "480"
+
     ports:
       - "8000:8000"
 
