@@ -30,6 +30,8 @@ Uploaded images are saved to the local `input/` directory and processed directly
 
 The original uploaded image is deleted after processing. Generated result folders are retained for one hour by default and cleaned up automatically when a later prediction starts. Configure this with `OUTPUT_RETENTION_SECONDS`.
 
+The DensePose model is downloaded automatically during the backend Docker build, so the large model file does not need to be committed to GitHub.
+
 ## Run With Docker
 
 Create a root `.env` file for Compose (do not commit it):

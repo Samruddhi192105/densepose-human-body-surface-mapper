@@ -16,6 +16,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libxext6 \
     libxrender1 \
     ffmpeg \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /workspace
@@ -34,9 +35,13 @@ RUN git clone --depth 1 https://github.com/facebookresearch/detectron2.git /opt/
 
 RUN pip install --no-build-isolation -e /opt/detectron2/projects/DensePose
 
+RUN mkdir -p models && \
+    curl --fail --location \
+    "https://dl.fbaipublicfiles.com/densepose/densepose_rcnn_R_50_FPN_s1x/165712039/model_final_162be9.pkl" \
+    --output models/model_final_162be9.pkl
+
 COPY app ./app
 COPY input ./input
 COPY output ./output
-COPY models ./models
 
 CMD ["uvicorn", "app.api:app", "--host", "0.0.0.0", "--port", "8000"]
