@@ -68,13 +68,13 @@ This provides an intuitive representation of how the detected human body surface
 
 ### DensePose Overlay
 
-<img width="959" height="415" alt="Screenshot 2026-09-12 122831" src="https://github.com/user-attachments/assets/a31fe200-600d-403d-8b5f-6e9225c4e5e1" />
+<img width="959" height="415" alt="1" src="https://github.com/user-attachments/assets/f3662ec8-a91c-4e60-829c-ea7495b2aa8d" />
 
-<img width="581" height="395" alt="Screenshot 2026-09-12 122857" src="https://github.com/user-attachments/assets/61d136a0-7ba8-4b95-88a2-55fb81221f35" />
+<img width="959" height="410" alt="2" src="https://github.com/user-attachments/assets/160a6cbd-dd0a-4b6e-873f-08f7d65ac8d3" />
 
-<img width="454" height="408" alt="Screenshot 2026-09-12 122910" src="https://github.com/user-attachments/assets/a09ba745-dc80-444c-ba80-a0248be5dcec" />
+<img width="959" height="414" alt="3" src="https://github.com/user-attachments/assets/59bdb619-2391-4b5c-aa72-eb4dbe347ebd" />
 
-<img width="483" height="268" alt="Screenshot 2026-09-12 122919" src="https://github.com/user-attachments/assets/07bf3271-ef17-491a-946f-085373ed1ca1" />
+<img width="959" height="415" alt="4" src="https://github.com/user-attachments/assets/0f2189db-222e-41ec-8a6e-f57d34571352" />
 
 ## 🧩 Body-Part Mapping
 
