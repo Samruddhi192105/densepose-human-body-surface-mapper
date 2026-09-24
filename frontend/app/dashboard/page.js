@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const API_URL = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000").replace(/\/$/, "");
 
 export default function Dashboard() {
   const router = useRouter();
@@ -37,11 +37,21 @@ export default function Dashboard() {
     setLoading(true); setError("");
     try {
       const body = new FormData(); body.append("file", file);
-      const response = await fetch(`${API_URL}/predict`, { method: "POST", body });
-      const data = await response.json();
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 120000);
+      let response;
+      try {
+        response = await fetch(`${API_URL}/predict`, { method: "POST", body, signal: controller.signal });
+      } finally {
+        clearTimeout(timeout);
+      }
+      const contentType = response.headers.get("content-type") || "";
+      const data = contentType.includes("application/json") ? await response.json() : null;
       if (!response.ok) throw new Error(data?.detail || "DensePose processing failed.");
       setResult(data);
-    } catch (err) { setError(err.message || "Could not connect to the DensePose backend."); } finally { setLoading(false); }
+    } catch (err) {
+      setError(err.name === "AbortError" ? "DensePose is taking too long. Check that the backend is running and try again." : err.message || "Could not connect to the DensePose backend.");
+    } finally { setLoading(false); }
   }
 
   function clearStudio() { if (preview) URL.revokeObjectURL(preview); setFile(null); setPreview(null); setResult(null); setError(""); }
@@ -65,6 +75,7 @@ export default function Dashboard() {
 function Layer({ number, title, copy }) { return <div className="layer-row"><span className="layer-number">{number}</span><div><strong>{title}</strong><p>{copy}</p></div><span className="layer-arrow">↗</span></div>; }
 
 function Results({ result }) {
-  const images = [["DensePose overlay", result.results?.densepose_overlay], ["IUV representation", result.results?.iuv], ["Body-part map", result.results?.body_part_map], ["Body-part heatmap", result.results?.body_part_heatmap]].filter(([, src]) => src);
-  return <section className="results-section"><div className="results-heading"><div><p className="eyebrow"><span className="eyebrow-line" /> Analysis complete</p><h2>Surface report</h2></div><div className="result-stats"><span><strong>{result.analysis?.people_detected ?? 0}</strong> people</span><span><strong>{result.analysis?.device?.toUpperCase() || "CPU"}</strong> device</span></div></div><div className="result-grid">{images.map(([title, src]) => <article className="result-card" key={title}><div><span>{title}</span><b>↗</b></div><img src={`${API_URL}${src}`} alt={title} /></article>)}</div></section>;
+  const images = [["DensePose overlay", result.results?.densepose_overlay], ["IUV representation", result.results?.iuv], ["Body-part map", result.results?.body_part_map]].filter(([, src]) => src);
+  const people = result.analysis?.people || [];
+  return <section className="results-section"><div className="results-heading"><div><p className="eyebrow"><span className="eyebrow-line" /> Analysis complete</p><h2>Surface report</h2></div><div className="result-stats"><span><strong>{result.analysis?.people_detected ?? 0}</strong> people</span><span><strong>{result.analysis?.device?.toUpperCase() || "CPU"}</strong> device</span></div></div><div className="result-grid">{images.map(([title, src]) => <article className="result-card" key={title}><div><span>{title}</span><b>↗</b></div><img src={`${API_URL}${src}`} alt={title} /></article>)}</div><div className="mapped-parts"><div className="mapped-parts-heading"><span className="panel-kicker">Semantic output</span><h3>Mapped body parts</h3></div>{people.length ? people.map((person) => <article className="person-parts" key={person.person_index}><div className="person-parts-heading"><strong>Person {person.person_index + 1}</strong><span>{Math.round((person.confidence || 0) * 100)}% confidence</span></div><div className="body-part-list">{(person.visible_body_parts || []).map((part) => <span className="body-part-label" key={part}>{part.replaceAll("_", " ")}<small>{person.pixel_count_by_body_part?.[part]?.toLocaleString() || 0}px</small></span>)}</div></article>) : <p className="no-parts">No body parts were mapped.</p>}</div></section>;
 }

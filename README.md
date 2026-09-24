@@ -24,6 +24,25 @@ The application also provides a web interface where users can upload an image an
 
 > **Note:** DensePose maps visible human regions to a canonical body surface representation. It does not reconstruct hidden body surfaces or produce a complete 3D human model from a single RGB image.
 
+## Local Processing
+
+Uploaded images are saved to the local `input/` directory and processed directly by the backend. Generated overlays, IUV images, body-part maps, and analysis JSON are saved under `output/`. Supabase is used only for authentication.
+
+The original uploaded image is deleted after processing. Generated result folders are retained for one hour by default and cleaned up automatically when a later prediction starts. Configure this with `OUTPUT_RETENTION_SECONDS`.
+
+## Run With Docker
+
+Create a root `.env` file for Compose (do not commit it):
+
+```env
+NEXT_PUBLIC_API_URL=http://localhost:8000
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your-publishable-key
+ALLOWED_ORIGINS=http://localhost:3000
+```
+
+Run the application with `docker compose up --build`, then open `http://localhost:3000`. For deployment, set `NEXT_PUBLIC_API_URL` to the public HTTPS URL of the backend and `ALLOWED_ORIGINS` to the public HTTPS URL of the frontend before building. The frontend variables are public browser configuration and are intentionally supplied as Docker build arguments.
+
 # ✨ Features
 
 ## 🧍 Human Detection

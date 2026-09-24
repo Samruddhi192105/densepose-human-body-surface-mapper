@@ -124,22 +124,6 @@ class DensePoseMapper:
         return cv2.applyColorMap(scaled, cv2.COLORMAP_TURBO)
 
     @staticmethod
-    def make_body_part_heatmap(iuv_image: np.ndarray) -> np.ndarray:
-        labels = iuv_image[:, :, 0]
-        detected = (labels > 0).astype(np.float32)
-        density = cv2.GaussianBlur(detected, (0, 0), sigmaX=15)
-
-        if density.max() > 0:
-            density = density / density.max()
-
-        heatmap = cv2.applyColorMap(
-            (density * 255).astype(np.uint8),
-            cv2.COLORMAP_INFERNO,
-        )
-        heatmap[labels == 0] = 0
-        return heatmap
-
-    @staticmethod
     def make_body_part_legend() -> list[dict]:
         legend = []
 
@@ -192,7 +176,6 @@ class DensePoseMapper:
         )
 
         body_part_map = self.make_body_part_map(iuv)
-        body_part_heatmap = self.make_body_part_heatmap(iuv)
 
         people = []
 
@@ -233,7 +216,6 @@ class DensePoseMapper:
         cv2.imwrite(str(output / "densepose_overlay.png"), overlay)
         cv2.imwrite(str(output / "iuv.png"), iuv)
         cv2.imwrite(str(output / "body_part_map.png"), body_part_map)
-        cv2.imwrite(str(output / "body_part_heatmap.png"), body_part_heatmap)
 
         with open(output / "analysis.json", "w", encoding="utf-8") as f:
             json.dump(analysis, f, indent=2)

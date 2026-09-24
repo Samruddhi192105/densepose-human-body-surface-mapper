@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import os
 import shutil
+import threading
+import time
 import uuid
 from pathlib import Path
 
@@ -54,11 +56,44 @@ mapper = DensePoseMapper(threshold=0.5)
 
 BASE_DIR = Path("/workspace")
 
-UPLOAD_DIR = BASE_DIR / "api_uploads"
-OUTPUT_DIR = BASE_DIR / "api_outputs"
+INPUT_DIR = BASE_DIR / "input"
+OUTPUT_DIR = BASE_DIR / "output"
 
-UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+INPUT_DIR.mkdir(parents=True, exist_ok=True)
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+
+try:
+    OUTPUT_RETENTION_SECONDS = max(
+        60,
+        int(os.getenv("OUTPUT_RETENTION_SECONDS", "3600")),
+    )
+except ValueError:
+    OUTPUT_RETENTION_SECONDS = 3600
+
+
+def remove_expired_outputs() -> None:
+    cutoff = time.time() - OUTPUT_RETENTION_SECONDS
+
+    for output_dir in OUTPUT_DIR.iterdir():
+        if not output_dir.is_dir():
+            continue
+
+        try:
+            if output_dir.stat().st_mtime < cutoff:
+                shutil.rmtree(output_dir)
+        except FileNotFoundError:
+            continue
+        except OSError:
+            continue
+
+
+def remove_output_directory(output_dir: Path) -> None:
+    try:
+        shutil.rmtree(output_dir)
+    except FileNotFoundError:
+        pass
+    except OSError:
+        pass
 
 
 # ---------------------------------------------------------
@@ -109,9 +144,11 @@ async def predict(file: UploadFile = File(...)):
             detail="Unsupported image format. Use JPG, JPEG, PNG, or WEBP.",
         )
 
+    remove_expired_outputs()
+
     request_id = uuid.uuid4().hex
 
-    input_path = UPLOAD_DIR / f"{request_id}{extension}"
+    input_path = INPUT_DIR / f"{request_id}{extension}"
     output_dir = OUTPUT_DIR / request_id
 
     try:
@@ -123,6 +160,12 @@ async def predict(file: UploadFile = File(...)):
             output_dir=str(output_dir),
         )
 
+        threading.Timer(
+            OUTPUT_RETENTION_SECONDS,
+            remove_output_directory,
+            args=(output_dir,),
+        ).start()
+
         return {
             "status": "success",
             "analysis": analysis,
@@ -133,9 +176,6 @@ async def predict(file: UploadFile = File(...)):
                 "iuv": f"/results/{request_id}/iuv.png",
                 "body_part_map": (
                     f"/results/{request_id}/body_part_map.png"
-                ),
-                "body_part_heatmap": (
-                    f"/results/{request_id}/body_part_heatmap.png"
                 ),
             },
         }
@@ -155,7 +195,7 @@ async def predict(file: UploadFile = File(...)):
     finally:
         try:
             input_path.unlink(missing_ok=True)
-        except Exception:
+        except OSError:
             pass
 
 
@@ -180,7 +220,6 @@ def get_result(
         "densepose_overlay.png",
         "iuv.png",
         "body_part_map.png",
-        "body_part_heatmap.png",
         "analysis.json",
     }
 

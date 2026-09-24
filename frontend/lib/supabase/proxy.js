@@ -54,10 +54,10 @@ export async function updateSession(request) {
     return NextResponse.redirect(url);
   }
 
-  // Already logged in → dashboard
+  // Already logged in → home
   if (claims && (isLoginPage || isRegisterPage)) {
     const url = request.nextUrl.clone();
-    url.pathname = "/dashboard";
+    url.pathname = "/";
 
     return NextResponse.redirect(url);
   }

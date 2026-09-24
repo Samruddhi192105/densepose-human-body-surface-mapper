@@ -28,7 +28,7 @@ export default function Home() {
         <div className="hero-index">01 <span>/</span> 04</div><div className="scroll-cue"><span /> Scroll to investigate</div>
       </section>
 
-      <section className="method-section" id="method"><div className="section-intro"><p className="eyebrow"><span className="eyebrow-line" /> The method</p><h2>A new coordinate<br /><em>system for people.</em></h2></div><div className="method-grid"><MethodCard number="01" title="Detect" copy="Find every person in the frame and isolate the visual evidence that matters." accent="orange" /><MethodCard number="02" title="Map" copy="Project visible pixels onto a canonical human surface with DensePose IUV coordinates." accent="blue" /><MethodCard number="03" title="Understand" copy="Read body regions, confidence, and heatmaps from a single image." accent="green" /></div></section>
+      <section className="method-section" id="method"><div className="section-intro"><p className="eyebrow"><span className="eyebrow-line" /> The method</p><h2>A new coordinate<br /><em>system for people.</em></h2></div><div className="method-grid"><MethodCard number="01" title="Detect" copy="Find every person in the frame and isolate the visual evidence that matters." accent="orange" /><MethodCard number="02" title="Map" copy="Project visible pixels onto a canonical human surface with DensePose IUV coordinates." accent="blue" /><MethodCard number="03" title="Understand" copy="Read mapped body parts and confidence from a single image." accent="green" /></div></section>
       <footer className="site-footer"><span>DensePose / Human body surface mapper</span><span>Detectron2 · FastAPI · Next.js</span></footer>
     </main>
   );

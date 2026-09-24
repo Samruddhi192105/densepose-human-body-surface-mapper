@@ -5,11 +5,10 @@ services:
       context: .
       dockerfile: Dockerfile.cpu
 
-    env_file:
-      - .env.local
-
     environment:
       DENSEPOSE_TEST_SIZE: "480"
+      OUTPUT_RETENTION_SECONDS: "3600"
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:3000}
 
     ports:
       - "8000:8000"
@@ -34,12 +33,19 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
+        NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL}
+        NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY}
+
+    env_file:
+      - ./frontend/.env.local
 
     ports:
       - "3000:3000"
 
     environment:
-      NEXT_PUBLIC_API_URL: http://localhost:8000
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
 
     depends_on:
       - backend
