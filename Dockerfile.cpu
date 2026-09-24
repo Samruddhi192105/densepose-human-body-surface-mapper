@@ -3,6 +3,10 @@ FROM python:3.10-slim
 ENV PYTHONUNBUFFERED=1
 ENV DEBIAN_FRONTEND=noninteractive
 ENV ALLOWED_ORIGINS=http://localhost:3000
+ENV OMP_NUM_THREADS=1
+ENV OPENBLAS_NUM_THREADS=1
+ENV MKL_NUM_THREADS=1
+ENV MALLOC_ARENA_MAX=2
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     git \
@@ -44,4 +48,4 @@ COPY app ./app
 COPY input ./input
 COPY output ./output
 
-CMD ["uvicorn", "app.api:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["sh", "-c", "uvicorn app.api:app --host 0.0.0.0 --port ${PORT:-8000}"]

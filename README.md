@@ -32,6 +32,8 @@ The original uploaded image is deleted after processing. Generated result folder
 
 The DensePose model is downloaded automatically during the backend Docker build, so the large model file does not need to be committed to GitHub.
 
+For Render, use an instance with at least 1 GB RAM. The free 512 MiB instance can be killed by the operating system while loading PyTorch and DensePose, before the API opens its port.
+
 ## Run With Docker
 
 Create a root `.env` file for Compose (do not commit it):
